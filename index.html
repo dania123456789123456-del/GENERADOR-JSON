@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel IPTV TMDB — JSON</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --red:#ff1a1a;
+  --red2:#ff4040;
+  --bg:#050505;
+  --card:#0d0d0d;
+  --card2:#111;
+  --border:#2a2a2a;
+  --green:#00ff9c;
+  --purple:#7b4dff;
+  --purple2:#5d3cff;
+}
+
+body{
+  font-family:'Outfit',sans-serif;
+  color:white;
+  padding:24px 16px 60px;
+  max-width:900px;
+  margin:auto;
+  background:
+    radial-gradient(circle at 20% 20%,#350000,transparent 40%),
+    radial-gradient(circle at 80% 10%,#240000,transparent 40%),
+    radial-gradient(circle at 50% 90%,#200000,transparent 40%),
+    #050505;
+  background-size:200% 200%;
+  animation:fondo 18s infinite alternate;
+}
+
+@keyframes fondo{0%{background-position:0% 0%}100%{background-position:100% 100%}}
+@keyframes brilloLogo{0%{filter:drop-shadow(0 0 5px #ff0000)}50%{filter:drop-shadow(0 0 20px #ff2a2a)}100%{filter:drop-shadow(0 0 10px #ff0000)}}
+
+.logo{display:block;margin:0 auto 20px;width:180px;filter:drop-shadow(0 0 10px #ff0000);animation:brilloLogo 3s infinite alternate;}
+
+h1{
+  text-align:center;font-family:'Creepster',cursive;font-size:clamp(38px,9vw,70px);
+  letter-spacing:5px;margin-bottom:32px;color:#ff1a1a;
+  text-shadow:0 0 10px #ff0000,0 0 20px #ff0000,0 0 40px #ff0000,0 0 60px #ff0000;
+}
+
+/* ── BUSCADOR ── */
+.buscador{display:flex;gap:10px;align-items:stretch;margin-bottom:15px;}
+.buscador input{
+  flex:1;padding:16px;border-radius:12px;border:1px solid var(--border);
+  background:#0a0a0a;color:white;font-size:15px;font-family:'Outfit',sans-serif;outline:none;
+  transition:border-color .2s;
+}
+.buscador input:focus{border-color:var(--red);}
+.buscador button{
+  padding:14px 28px;border:none;border-radius:12px;font-size:14px;font-weight:700;
+  cursor:pointer;background:linear-gradient(90deg,var(--red),var(--red2));color:white;
+  font-family:'Outfit',sans-serif;white-space:nowrap;
+}
+
+/* ── GRID CARDS BUSQUEDA ── */
+#links{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:12px;
+  margin-top:20px;transition:opacity .2s;
+}
+@media(max-width:600px){#links{grid-template-columns:repeat(3,1fr);}}
+.card-busqueda{background:var(--card2);border-radius:12px;overflow:hidden;cursor:pointer;transition:.25s;}
+.card-busqueda:hover{transform:scale(1.05);box-shadow:0 0 15px var(--red);}
+.poster-busqueda{width:100%;height:200px;object-fit:cover;display:block;}
+.titulo-busqueda{padding:8px;font-size:12px;text-align:center;font-weight:700;}
+
+/* ── INFO ── */
+#info,#links-wrap{
+  width:100%;margin-top:20px;background:rgba(20,20,20,.88);
+  border-radius:16px;padding:20px;
+}
+.poster{height:200px;margin:12px 0 16px;border-radius:10px;}
+#info p{line-height:1.6;font-size:14px;color:#ccc;margin-top:8px;}
+
+/* ── TEMPORADAS ── */
+.season{margin-top:28px;}
+.season-title{
+  font-size:16px;font-weight:700;color:var(--red);cursor:pointer;
+  margin-bottom:14px;display:block;
+}
+.season-title:hover{color:var(--red2);}
+
+/* ── GRID EPISODIOS ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:10px;margin-bottom:16px;}
+.ep{
+  background:#111;padding:9px 6px;border-radius:8px;text-align:center;
+  cursor:pointer;border:1px solid var(--border);font-size:13px;font-weight:600;
+  transition:.15s;
+}
+.ep:hover{border-color:var(--red);color:var(--red);}
+.ep.active{background:var(--green);color:#000;border-color:var(--green);}
+
+/* ── EDITOR JSON ── */
+#editorJSON{
+  display:none;margin-top:20px;background:#080808;
+  padding:22px;border-radius:14px;border:1px solid #2a2a2a;
+}
+.editor-header{
+  font-size:16px;font-weight:800;color:var(--red);
+  margin-bottom:18px;font-family:'Creepster',cursive;letter-spacing:1px;
+}
+
+/* campos */
+.field-label{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;}
+.field-input{
+  width:100%;background:#060606;border:1px solid var(--border);border-radius:8px;
+  color:white;padding:10px 13px;font-size:14px;font-family:'Outfit',sans-serif;outline:none;
+  transition:border-color .2s;
+}
+.field-input:focus{border-color:var(--red);}
+.field-group{margin-bottom:14px;}
+
+/* filas calidad/audio/sub */
+.rows-section{margin-bottom:16px;}
+.rows-header{
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;
+}
+.rows-title{font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.8px;}
+.btn-add{
+  background:rgba(255,26,26,.15);border:1px solid rgba(255,26,26,.3);
+  border-radius:6px;color:var(--red);font-size:12px;font-weight:700;
+  padding:3px 10px;cursor:pointer;font-family:'Outfit',sans-serif;transition:.15s;
+}
+.btn-add:hover{background:rgba(255,26,26,.28);}
+
+.dyn-row{display:flex;gap:8px;margin-bottom:7px;align-items:center;}
+.dyn-row select,.dyn-row input{
+  background:#060606;border:1px solid var(--border);border-radius:7px;
+  color:white;padding:8px 10px;font-size:13px;font-family:'Outfit',sans-serif;outline:none;
+  transition:border-color .2s;
+}
+.dyn-row select{flex-shrink:0;min-width:110px;}
+.dyn-row input{flex:1;}
+.dyn-row select:focus,.dyn-row input:focus{border-color:var(--red);}
+.btn-del-row{
+  background:#1a0000;border:1px solid #3a0000;border-radius:6px;
+  color:#ff4444;font-size:14px;padding:4px 9px;cursor:pointer;flex-shrink:0;
+  transition:.15s;
+}
+.btn-del-row:hover{background:#2a0000;}
+
+/* ── BOTÓN AGREGAR JSON ── */
+.btn-agregar{
+  width:100%;margin-top:6px;padding:15px;border:none;border-radius:12px;
+  background:linear-gradient(90deg,var(--purple),var(--purple2));color:white;
+  font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;cursor:pointer;
+  transition:transform .15s,box-shadow .15s;
+}
+.btn-agregar:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(123,77,255,.4);}
+
+/* ── CONTADOR / LISTA ── */
+#contador{margin-top:24px;font-size:15px;color:var(--green);font-weight:700;}
+h2{margin-top:22px;margin-bottom:10px;font-size:17px;}
+
+#lista{
+  max-height:280px;overflow-y:auto;background:rgba(20,20,20,.85);
+  border-radius:14px;padding:14px;margin-top:10px;
+}
+#lista::-webkit-scrollbar{width:4px;}
+#lista::-webkit-scrollbar-thumb{background:rgba(255,26,26,.3);border-radius:2px;}
+
+.lista-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 12px;margin-bottom:6px;background:var(--card2);border-radius:8px;
+  border:1px solid var(--border);font-size:13px;
+}
+.lista-item .item-name{flex:1;}
+.item-existe{color:var(--green);font-weight:700;}
+.ya-existe{margin-left:10px;color:var(--green);font-weight:700;font-size:11px;}
+.btn-eliminar{
+  background:#ff3b3b;border:none;color:white;padding:5px 10px;
+  border-radius:6px;cursor:pointer;font-size:11px;flex-shrink:0;
+}
+
+/* ── OPCIONES JSON ── */
+.json-opts{margin-top:22px;}
+
+.config-grid{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;
+  background:rgba(20,20,20,.85);border-radius:14px;padding:16px;margin-bottom:14px;
+}
+@media(max-width:500px){.config-grid{grid-template-columns:1fr 1fr;}}
+
+.config-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;}
+.config-input{
+  width:100%;background:#060606;border:1px solid var(--border);border-radius:8px;
+  color:white;padding:9px 11px;font-size:13px;font-family:'Outfit',sans-serif;outline:none;
+}
+.config-input:focus{border-color:var(--red);}
+
+label.check-label{
+  display:flex;align-items:center;gap:10px;font-size:13px;color:#aaa;margin-bottom:12px;cursor:pointer;
+}
+
+/* ── BOTONES JSON ── */
+.json-buttons{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+.json-buttons button{
+  padding:13px 24px;border:none;border-radius:10px;font-size:13px;font-weight:700;
+  cursor:pointer;font-family:'Outfit',sans-serif;transition:.15s;
+}
+.json-buttons button:nth-child(1){background:linear-gradient(90deg,var(--red),var(--red2));color:white;}
+.json-buttons button:nth-child(2){background:linear-gradient(90deg,var(--purple),var(--purple2));color:white;}
+.json-buttons button:nth-child(3){background:linear-gradient(90deg,#37d06d,#2fb358);color:white;}
+.json-buttons button:hover{filter:brightness(1.15);}
+
+textarea{
+  width:100%;height:280px;background:#020202;padding:18px;
+  border:1px solid #222;border-radius:12px;color:#00ff9c;
+  font-family:monospace;font-size:13px;resize:vertical;outline:none;
+}
+
+/* ── LISTA GITHUB ── */
+.github-section{margin-top:24px;background:rgba(20,20,20,.85);border-radius:14px;padding:18px;}
+.github-section h2{margin:0 0 12px;}
+.btn-cargar{
+  padding:11px 24px;border:none;border-radius:10px;font-size:13px;font-weight:700;
+  cursor:pointer;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
+  color:white;font-family:'Outfit',sans-serif;transition:.15s;
+}
+.btn-cargar:hover{background:rgba(255,255,255,.18);}
+#listaPastebin{margin-top:16px;}
+#listaPastebin .season-title{margin-top:18px;}
+
+/* ── CONFIRM BOX ── */
+.confirm-box{
+  position:fixed;inset:0;background:rgba(0,0,0,.85);
+  display:none;align-items:center;justify-content:center;z-index:999;
+}
+.confirm-content{
+  background:#0b0b0b;border:1px solid var(--red);padding:28px;
+  border-radius:14px;text-align:center;max-width:320px;width:90%;
+}
+.confirm-content p{margin-bottom:18px;font-size:15px;}
+.confirm-buttons{display:flex;gap:10px;justify-content:center;}
+.confirm-buttons button:first-child{background:linear-gradient(90deg,var(--red),var(--red2));color:white;border:none;border-radius:10px;padding:11px 22px;font-weight:700;cursor:pointer;}
+.confirm-buttons button:last-child{background:#222;color:white;border:none;border-radius:10px;padding:11px 22px;font-weight:700;cursor:pointer;}
+
+/* ── FOOTER ── */
+.footer{text-align:center;margin-top:50px;color:#555;font-size:13px;cursor:pointer;}
+.footer:hover{color:#888;}
+</style>
+</head>
+<body>
+
+<img class="logo" src="https://i.postimg.cc/ryG35JNN/Black-Red-and-White-Modern-Illustrative-Spooky-Movie-Halloween-Logo-20260315-184147-0000.png">
+<h1>Panel IPTV TMDB</h1>
+
+<!-- BUSCADOR -->
+<div class="buscador">
+  <input id="tmdb_id" placeholder="Buscar película, serie o pegar ID TMDB" onkeydown="if(event.key==='Enter')buscar()">
+  <button onclick="buscar()">Buscar</button>
+</div>
+
+<div id="info"></div>
+<div id="links"></div>
+
+<!-- EDITOR JSON -->
+<div id="editorJSON">
+  <div class="editor-header" id="editorTitle">—</div>
+
+  <div class="field-group">
+    <div class="field-label">🎬 Link de Video principal (mkv / mp4 / m3u8)</div>
+    <input class="field-input" id="edUrl" placeholder="https://... URL principal del video">
+  </div>
+
+  <!-- CALIDADES -->
+  <div class="rows-section">
+    <div class="rows-header">
+      <div class="rows-title">📺 Calidades adicionales (opcional)</div>
+      <button class="btn-add" onclick="addRow('qualRows','quality')">+ Agregar</button>
+    </div>
+    <div id="qualRows"></div>
+  </div>
+
+  <!-- AUDIO -->
+  <div class="rows-section">
+    <div class="rows-header">
+      <div class="rows-title">🔊 Pistas de Audio externo (opcional)</div>
+      <button class="btn-add" onclick="addRow('audioRows','audio')">+ Agregar</button>
+    </div>
+    <div id="audioRows"></div>
+  </div>
+
+  <!-- SUBTÍTULOS -->
+  <div class="rows-section">
+    <div class="rows-header">
+      <div class="rows-title">💬 Subtítulos (.vtt / .srt) (opcional)</div>
+      <button class="btn-add" onclick="addRow('subRows','sub')">+ Agregar</button>
+    </div>
+    <div id="subRows"></div>
+  </div>
+
+  <button class="btn-agregar" onclick="agregar()">✦ Agregar a lista JSON</button>
+</div>
+
+<!-- CONTADOR Y LISTA -->
+<div id="contador">Total agregado: 0</div>
+<h2>Contenido agregado</h2>
+<div id="lista"></div>
+
+<!-- OPCIONES JSON -->
+<div class="json-opts">
+  <div style="margin-bottom:10px;font-size:13px;color:#888;">⚙ Configuración del JSON (mi_cine.html)</div>
+  <div class="config-grid">
+    <div>
+      <div class="config-label">Nombre app</div>
+      <input class="config-input" id="cfgApp" value="MiCine">
+    </div>
+    <div>
+      <div class="config-label">Usuario</div>
+      <input class="config-input" id="cfgUser" value="admin">
+    </div>
+    <div>
+      <div class="config-label">Contraseña</div>
+      <input class="config-input" id="cfgPass" value="1234">
+    </div>
+  </div>
+
+  <div class="json-buttons">
+    <button onclick="generarJSON()">⚡ Generar JSON</button>
+    <button onclick="copiarJSON()">📋 Copiar JSON</button>
+    <button onclick="limpiar()">🗑 Limpiar lista</button>
+  </div>
+
+  <textarea id="resultado" placeholder="El JSON generado aparecerá aquí..."></textarea>
+</div>
+
+<!-- LISTA GITHUB -->
+<div class="github-section">
+  <h2>JSON publicado (GitHub)</h2>
+  <button class="btn-cargar" onclick="verListaGitHub()">Cargar lista</button>
+  <div id="listaPastebin"></div>
+</div>
+
+<div class="footer" onclick="window.open('https://www.instagram.com/juan_nsr21?igsh=OXIwZzB5cGNiMWY4')">Created by JUAN NSR</div>
+
+<!-- CONFIRM BOX -->
+<div id="confirmBox" class="confirm-box">
+  <div class="confirm-content">
+    <p>¿Seguro que quieres borrar toda la lista?</p>
+    <div class="confirm-buttons">
+      <button onclick="confirmarLimpiar()">SI BORRAR</button>
+      <button onclick="cancelarLimpiar()">CANCELAR</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const apiKey = "3ba1079b7db0165cabfc8282f7e5d7ee";
+const GITHUB_JSON_URL = "https://raw.githubusercontent.com/dania123456789123456-del/Json/refs/heads/main/catalogo.json";
+
+let base = JSON.parse(localStorage.getItem("panel_json_lista")) || [];
+let contenido = {};
+let currentItem = null; // {type:'movie'|'episode', t, e, n, tmdb_id, poster}
+let postersTemporadas = {};
+
+/* ══════════════════════════════
+   FILAS DINÁMICAS (quality/audio/sub)
+══════════════════════════════ */
+const QUALITY_OPTS = ['4K','Full HD','HD 720p','SD 480p','Auto'];
+const AUDIO_OPTS   = ['Latino','Español','English','Portugués','Francés','Italiano','Japonés','Alemán'];
+const SUB_LANGS    = {
+  'Español':'es','English':'en','Portugués':'pt',
+  'Francés':'fr','Alemán':'de','Italiano':'it','Japonés':'ja','Árabe':'ar'
+};
+
+function addRow(containerId, type){
+  const c = document.getElementById(containerId);
+  const div = document.createElement('div');
+  div.className = 'dyn-row';
+
+  if(type === 'quality'){
+    div.innerHTML = `
+      <select>${QUALITY_OPTS.map(o=>`<option>${o}</option>`).join('')}</select>
+      <input placeholder="URL Calidad (mp4 / m3u8)">
+      <button class="btn-del-row" onclick="this.parentElement.remove()">✕</button>`;
+  } else if(type === 'audio'){
+    div.innerHTML = `
+      <select>${AUDIO_OPTS.map(o=>`<option>${o}</option>`).join('')}</select>
+      <input placeholder="URL Audio externo (mp3 / aac / mkv)">
+      <button class="btn-del-row" onclick="this.parentElement.remove()">✕</button>`;
+  } else if(type === 'sub'){
+    div.innerHTML = `
+      <select>${Object.keys(SUB_LANGS).map(o=>`<option>${o}</option>`).join('')}</select>
+      <input placeholder="URL Subtítulo (.vtt / .srt)">
+      <button class="btn-del-row" onclick="this.parentElement.remove()">✕</button>`;
+  }
+  c.appendChild(div);
+}
+
+function getRows(containerId, type){
+  const rows = document.querySelectorAll(`#${containerId} .dyn-row`);
+  const result = [];
+  rows.forEach(row => {
+    const sel = row.querySelector('select');
+    const inp = row.querySelector('input');
+    if(!inp.value.trim()) return;
+    if(type === 'quality'){
+      result.push({ label: sel.value, url: inp.value.trim() });
+    } else if(type === 'audio'){
+      result.push({ label: sel.value, url: inp.value.trim() });
+    } else if(type === 'sub'){
+      result.push({ label: sel.value, lang: SUB_LANGS[sel.value]||'es', url: inp.value.trim() });
+    }
+  });
+  return result;
+}
+
+function clearEditor(){
+  document.getElementById('edUrl').value = '';
+  document.getElementById('qualRows').innerHTML = '';
+  document.getElementById('audioRows').innerHTML = '';
+  document.getElementById('subRows').innerHTML = '';
+}
+
+/* ══════════════════════════════
+   BUSCAR
+══════════════════════════════ */
+async function buscar(){
+  const query = document.getElementById('tmdb_id').value.trim();
+  document.getElementById('links').innerHTML = '';
+  document.getElementById('info').innerHTML = '';
+  document.getElementById('links').style.display = 'grid';
+  document.getElementById('editorJSON').style.display = 'none';
+  currentItem = null;
+  if(!query) return;
+  if(!isNaN(query)){
+    buscarPorID(query);
+  } else {
+    buscarPorNombre(query);
+  }
+}
+
+async function buscarPorNombre(query){
+  const res  = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&language=es&query=${encodeURIComponent(query)}`);
+  const data = await res.json();
+  let html = '';
+  data.results.forEach(item => {
+    const titulo = item.title || item.name;
+    const tipo   = item.media_type;
+    const poster = item.poster_path;
+    if(!titulo || !poster) return;
+    html += `<div class="card-busqueda" onclick="seleccionarResultado('${tipo}',${item.id})">
+      <img src="https://image.tmdb.org/t/p/w500${poster}" class="poster-busqueda" loading="lazy">
+      <div class="titulo-busqueda">${titulo}</div>
+    </div>`;
+  });
+  document.getElementById('links').innerHTML = html || '<div style="color:#888;padding:10px">Sin resultados</div>';
+}
+
+function seleccionarResultado(tipo, id){
+  if(tipo === 'movie') buscarPelicula(id);
+  if(tipo === 'tv')    buscarSerie(id);
+}
+
+function toggleSeason(el){
+  const g = el.nextElementSibling;
+  g.style.display = g.style.display === 'none' ? 'grid' : 'none';
+}
+
+async function buscarPorID(id){
+  const [mr, sr] = await Promise.all([
+    fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${apiKey}&language=es`),
+    fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&language=es`)
+  ]);
+  const md = await mr.json();
+  const sd = await sr.json();
+  let opciones = '';
+  if(md && md.title)
+    opciones += `<div class="lista-item" onclick="buscarPelicula(${id})" style="cursor:pointer">
+      <img src="https://image.tmdb.org/t/p/w200${md.poster_path}" style="height:70px;border-radius:6px;margin-right:12px">
+      <span>🎬 ${md.title} (Película)</span></div>`;
+  if(sd && sd.name)
+    opciones += `<div class="lista-item" onclick="buscarSerie(${id})" style="cursor:pointer">
+      <img src="https://image.tmdb.org/t/p/w200${sd.poster_path}" style="height:70px;border-radius:6px;margin-right:12px">
+      <span>📺 ${sd.name} (Serie)</span></div>`;
+  if(!opciones){ alert('No se encontró contenido con ese ID'); return; }
+  document.getElementById('links').style.display = 'block';
+  document.getElementById('links').innerHTML = opciones;
+}
+
+/* ══════════════════════════════
+   PELÍCULA
+══════════════════════════════ */
+async function buscarPelicula(id){
+  document.getElementById('links').style.display = 'none';
+  const r    = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${apiKey}&language=es`);
+  const data = await r.json();
+  contenido  = { titulo: data.title, poster: data.poster_path, backdrop: data.backdrop_path,
+                 overview: data.overview, year: (data.release_date||'').slice(0,4), tmdb_id: id };
+
+  document.getElementById('info').innerHTML =
+    `<h2>${data.title}</h2>
+     <img class="poster" src="https://image.tmdb.org/t/p/w500${data.poster_path}">
+     <p>${data.overview}</p>`;
+
+  currentItem = { type:'movie', t:1, e:1, n:data.title,
+                  tmdb_id:id, poster:data.poster_path };
+
+  document.getElementById('links').innerHTML = '';
+  document.getElementById('links').style.display = 'none';
+
+  abrirEditorJSON(`🎬 Película: ${data.title}`);
+}
+
+/* ══════════════════════════════
+   SERIE
+══════════════════════════════ */
+async function buscarSerie(id){
+  document.getElementById('links').style.display = 'none';
+  const r    = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&language=es`);
+  const data = await r.json();
+  contenido  = { titulo: data.name, poster: data.poster_path, backdrop: data.backdrop_path,
+                 overview: data.overview, year: (data.first_air_date||'').slice(0,4), tmdb_id: id };
+
+  document.getElementById('info').innerHTML =
+    `<h2>${data.name}</h2>
+     <img class="poster" src="https://image.tmdb.org/t/p/w500${data.poster_path}">
+     <p>${data.overview}</p>`;
+
+  let html = '';
+  for(let t = 1; t <= data.number_of_seasons; t++){
+    const tr   = await fetch(`https://api.themoviedb.org/3/tv/${id}/season/${t}?api_key=${apiKey}&language=es`);
+    const temp = await tr.json();
+    postersTemporadas[t] = temp.poster_path || data.poster_path;
+
+    html += `<div class="season">
+      <div class="season-title" onclick="toggleSeason(this)">▶ Temporada ${t}</div>
+      <div class="grid" style="display:none">`;
+
+    temp.episodes.forEach(ep => {
+      const activo = base.some(i =>
+        i.titulo === data.name && i.temporada === t && i.episodio === ep.episode_number
+      );
+      html += `<div class="ep ${activo?'active':''}" data-season="${t}" data-episode="${ep.episode_number}"
+        onclick="abrirEpEditor(${t},${ep.episode_number},'${(ep.name||'Capítulo').replace(/'/g,"\\'")}',this)">
+        ${String(ep.episode_number).padStart(2,'0')}</div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  document.getElementById('links').style.display = 'block';
+  document.getElementById('links').innerHTML = html;
+}
+
+function abrirEpEditor(t, e, n, elem){
+  if(currentItem && currentItem.type==='episode' && currentItem.t===t && currentItem.e===e){
+    document.getElementById('editorJSON').style.display='none';
+    currentItem = null; return;
+  }
+  currentItem = { type:'episode', t, e, n, tmdb_id:contenido.tmdb_id,
+    poster: postersTemporadas[t] || contenido.poster, elemento: elem };
+  abrirEditorJSON(`📺 ${contenido.titulo} — T${String(t).padStart(2,'0')} E${String(e).padStart(2,'0')}: ${n}`);
+}
+
+function abrirEditorJSON(titulo){
+  clearEditor();
+  document.getElementById('editorTitle').textContent = titulo;
+  document.getElementById('editorJSON').style.display = 'block';
+  document.getElementById('editorJSON').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+/* ══════════════════════════════
+   AGREGAR
+══════════════════════════════ */
+function agregar(){
+  const url = document.getElementById('edUrl').value.trim();
+  if(!url){ alert('⚠ Ingresa al menos la URL principal del video'); return; }
+  if(!currentItem){ alert('⚠ Selecciona una película o episodio primero'); return; }
+
+  const entry = {
+    type:      currentItem.type,
+    tmdb_id:   currentItem.tmdb_id,
+    titulo:    contenido.titulo,
+    temporada: currentItem.t,
+    episodio:  currentItem.e,
+    capitulo:  currentItem.n,
+    poster:    currentItem.poster,
+    backdrop:  contenido.backdrop || '',
+    overview:  contenido.overview || '',
+    year:      contenido.year || '',
+    url,
+    qualities: getRows('qualRows','quality'),
+    audio:     getRows('audioRows','audio'),
+    subtitles: getRows('subRows','sub'),
+  };
+
+  base.push(entry);
+  guardar();
+  clearEditor();
+  document.getElementById('editorJSON').style.display = 'none';
+
+  if(currentItem.elemento){
+    currentItem.elemento.classList.add('active');
+  }
+  currentItem = null;
+  mostrar();
+}
+
+function guardar(){
+  localStorage.setItem('panel_json_lista', JSON.stringify(base));
+}
+
+function mostrar(){
+  let html = '';
+  base.forEach((i, idx) => {
+    const nombre = i.type === 'movie'
+      ? `🎬 ${i.titulo}`
+      : `📺 ${i.titulo} T${String(i.temporada).padStart(2,'0')} E${String(i.episodio).padStart(2,'0')}`;
+    html += `<div class="lista-item">
+      <span class="item-name">${nombre}</span>
+      <button onclick="eliminar(${idx})" class="btn-eliminar">✕</button>
+    </div>`;
+  });
+  document.getElementById('lista').innerHTML = html || '<div style="color:#555;font-size:13px">Sin contenido aún</div>';
+  document.getElementById('contador').innerText = 'Total agregado: ' + base.length;
+}
+
+function eliminar(idx){
+  const item = base[idx];
+  // desmarcar el .ep si es episodio
+  if(item.type === 'episode'){
+    document.querySelectorAll('.ep').forEach(el => {
+      if(parseInt(el.dataset.season)===item.temporada && parseInt(el.dataset.episode)===item.episodio){
+        el.classList.remove('active');
+      }
+    });
+  }
+  base.splice(idx, 1);
+  guardar(); mostrar();
+}
+
+/* ══════════════════════════════
+   GENERAR JSON
+══════════════════════════════ */
+function generarJSON(){
+  const appName = document.getElementById('cfgApp').value || 'MiCine';
+  const user    = document.getElementById('cfgUser').value || 'admin';
+  const pass    = document.getElementById('cfgPass').value || '1234';
+
+  const movies = base.filter(i => i.type === 'movie');
+  const eps    = base.filter(i => i.type === 'episode');
+
+  // ── Películas ──
+  const moviesJSON = movies.map((m, idx) => ({
+    id:          `m${idx+1}`,
+    title:       m.titulo,
+    tmdb_id:     parseInt(m.tmdb_id) || m.tmdb_id,
+    year:        parseInt(m.year) || m.year || '',
+    poster:      '',
+    backdrop:    '',
+    description: '',
+    url:         m.url,
+    qualities:   m.qualities,
+    audio:       m.audio,
+    subtitles:   m.subtitles,
+  }));
+
+  // ── Series: agrupar por título ──
+  const seriesMap = {};
+  eps.forEach(ep => {
+    if(!seriesMap[ep.titulo]){
+      seriesMap[ep.titulo] = { tmdb_id: ep.tmdb_id, seasons: {} };
+    }
+    if(!seriesMap[ep.titulo].seasons[ep.temporada]){
+      seriesMap[ep.titulo].seasons[ep.temporada] = [];
+    }
+    seriesMap[ep.titulo].seasons[ep.temporada].push(ep);
+  });
+
+  const seriesJSON = Object.entries(seriesMap).map(([title, data], idx) => ({
+    id:      `s${idx+1}`,
+    title,
+    tmdb_id: parseInt(data.tmdb_id) || data.tmdb_id,
+    seasons: Object.entries(data.seasons)
+      .sort((a,b) => parseInt(a[0]) - parseInt(b[0]))
+      .map(([sNum, epList]) => ({
+        season_number: parseInt(sNum),
+        name:          `Temporada ${sNum}`,
+        episodes: epList
+          .sort((a,b) => a.episodio - b.episodio)
+          .map(ep => ({
+            episode_number: ep.episodio,
+            title:          ep.capitulo,
+            thumbnail:      '',
+            description:    '',
+            url:            ep.url,
+            qualities:      ep.qualities,
+            audio:          ep.audio,
+            subtitles:      ep.subtitles,
+          }))
+      }))
+  }));
+
+  const json = {
+    config: { app_name: appName, user, password: pass },
+    movies: moviesJSON,
+    series: seriesJSON,
+  };
+
+  document.getElementById('resultado').value = JSON.stringify(json, null, 2);
+}
+
+async function copiarJSON(){
+  const txt = document.getElementById('resultado').value;
+  if(!txt){ alert('Primero genera el JSON'); return; }
+  try{
+    await navigator.clipboard.writeText(txt);
+    alert('✅ JSON copiado al portapapeles');
+  }catch(e){
+    const ta = document.getElementById('resultado');
+    ta.select(); document.execCommand('copy');
+    alert('✅ JSON copiado');
+  }
+}
+
+function limpiar(){ document.getElementById('confirmBox').style.display='flex'; }
+function confirmarLimpiar(){
+  base = [];
+  localStorage.removeItem('panel_json_lista');
+  document.getElementById('lista').innerHTML = '';
+  document.getElementById('resultado').value = '';
+  document.getElementById('contador').innerText = 'Total agregado: 0';
+  document.querySelectorAll('.ep').forEach(e=>e.classList.remove('active'));
+  document.getElementById('confirmBox').style.display = 'none';
+}
+function cancelarLimpiar(){ document.getElementById('confirmBox').style.display='none'; }
+
+/* ══════════════════════════════
+   CARGAR LISTA GITHUB (JSON)
+══════════════════════════════ */
+async function verListaGitHub(){
+  const el = document.getElementById('listaPastebin');
+  el.innerHTML = '<div style="color:#888;font-size:13px">Cargando...</div>';
+  try{
+    const res  = await fetch(GITHUB_JSON_URL);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    let html = '';
+
+    if(data.movies && data.movies.length){
+      html += `<div class="season-title" onclick="toggleSeason(this)">▶ PELÍCULAS (${data.movies.length})</div>
+        <div style="display:none;padding-left:14px;">`;
+      data.movies.forEach(m=>{
+        html += `<div style="padding:4px 0;font-size:13px;color:#ccc">🎬 ${m.title} ${m.year?'('+m.year+')':''}</div>`;
+      });
+      html += `</div>`;
+    }
+
+    if(data.series && data.series.length){
+      html += `<div class="season-title" onclick="toggleSeason(this)">▶ SERIES (${data.series.length})</div>
+        <div style="display:none;padding-left:14px;">`;
+      data.series.forEach(s=>{
+        let epCount = (s.seasons||[]).reduce((acc,se)=>acc+(se.episodes||[]).length,0);
+        html += `<div style="padding:4px 0;font-size:13px;color:#ccc">📺 ${s.title} — ${epCount} episodios</div>`;
+      });
+      html += `</div>`;
+    }
+
+    el.innerHTML = html || '<div style="color:#888">JSON vacío o sin contenido</div>';
+  }catch(e){
+    el.innerHTML = `<div style="color:#ff4444">Error al cargar: ${e.message}</div>`;
+  }
+}
+
+/* ══════════════════════════════
+   INIT
+══════════════════════════════ */
+mostrar();
+
+document.getElementById('tmdb_id').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') buscar();
+});
+</script>
+</body>
+</html>
