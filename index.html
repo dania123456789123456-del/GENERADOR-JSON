@@ -270,6 +270,12 @@ textarea{
     <input class="field-input" id="edUrl" placeholder="https://... URL principal del video">
   </div>
 
+  <!-- TRAILER -->
+  <div class="field-group">
+    <div class="field-label">🎥 Trailer (URL mp4 / embed) (opcional)</div>
+    <input class="field-input" id="edTrailer" placeholder="https://... URL del trailer">
+  </div>
+
   <!-- CALIDADES -->
   <div class="rows-section">
     <div class="rows-header">
@@ -320,6 +326,33 @@ textarea{
     <div>
       <div class="config-label">Contraseña</div>
       <input class="config-input" id="cfgPass" value="1234">
+    </div>
+  </div>
+
+  <!-- MODO DE GENERACIÓN -->
+  <div style="margin-bottom:14px;background:rgba(20,20,20,.85);border-radius:12px;padding:14px 16px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">📦 Modo de generación</div>
+    <div style="display:flex;flex-wrap:wrap;gap:14px;">
+      <label class="check-label">
+        <input type="radio" name="jsonMode" value="full" checked
+          style="accent-color:var(--red);width:15px;height:15px;">
+        JSON Completo
+      </label>
+      <label class="check-label">
+        <input type="radio" name="jsonMode" value="movie"
+          style="accent-color:var(--red);width:15px;height:15px;">
+        🎬 Solo Película
+      </label>
+      <label class="check-label">
+        <input type="radio" name="jsonMode" value="series"
+          style="accent-color:var(--red);width:15px;height:15px;">
+        📺 Solo Serie
+      </label>
+      <label class="check-label">
+        <input type="radio" name="jsonMode" value="episode"
+          style="accent-color:var(--red);width:15px;height:15px;">
+        🎯 Solo Capítulo
+      </label>
     </div>
   </div>
 
@@ -415,6 +448,7 @@ function getRows(containerId, type){
 
 function clearEditor(){
   document.getElementById('edUrl').value = '';
+  document.getElementById('edTrailer').value = '';
   document.getElementById('qualRows').innerHTML = '';
   document.getElementById('audioRows').innerHTML = '';
   document.getElementById('subRows').innerHTML = '';
@@ -587,6 +621,7 @@ function agregar(){
     overview:  contenido.overview || '',
     year:      contenido.year || '',
     url,
+    trailer:   document.getElementById('edTrailer').value.trim(),
     qualities: getRows('qualRows','quality'),
     audio:     getRows('audioRows','audio'),
     subtitles: getRows('subRows','sub'),
@@ -644,6 +679,7 @@ function generarJSON(){
   const appName = document.getElementById('cfgApp').value || 'MiCine';
   const user    = document.getElementById('cfgUser').value || 'admin';
   const pass    = document.getElementById('cfgPass').value || '1234';
+  const mode    = document.querySelector('input[name="jsonMode"]:checked').value;
 
   const movies = base.filter(i => i.type === 'movie');
   const eps    = base.filter(i => i.type === 'episode');
@@ -657,6 +693,7 @@ function generarJSON(){
     poster:      '',
     backdrop:    '',
     description: '',
+    trailer:     m.trailer || '',
     url:         m.url,
     qualities:   m.qualities,
     audio:       m.audio,
@@ -667,7 +704,7 @@ function generarJSON(){
   const seriesMap = {};
   eps.forEach(ep => {
     if(!seriesMap[ep.titulo]){
-      seriesMap[ep.titulo] = { tmdb_id: ep.tmdb_id, seasons: {} };
+      seriesMap[ep.titulo] = { tmdb_id: ep.tmdb_id, trailer: ep.trailer || '', seasons: {} };
     }
     if(!seriesMap[ep.titulo].seasons[ep.temporada]){
       seriesMap[ep.titulo].seasons[ep.temporada] = [];
@@ -679,6 +716,7 @@ function generarJSON(){
     id:      `s${idx+1}`,
     title,
     tmdb_id: parseInt(data.tmdb_id) || data.tmdb_id,
+    trailer: data.trailer || '',
     seasons: Object.entries(data.seasons)
       .sort((a,b) => parseInt(a[0]) - parseInt(b[0]))
       .map(([sNum, epList]) => ({
@@ -699,13 +737,41 @@ function generarJSON(){
       }))
   }));
 
-  const json = {
-    config: { app_name: appName, user, password: pass },
-    movies: moviesJSON,
-    series: seriesJSON,
-  };
+  // ── Solo capítulo ──
+  const episodesJSON = eps.map(ep => ({
+    episode_number: ep.episodio,
+    title:          ep.capitulo,
+    thumbnail:      '',
+    description:    '',
+    url:            ep.url,
+    qualities:      ep.qualities,
+    audio:          ep.audio,
+    subtitles:      ep.subtitles,
+  }));
 
-  document.getElementById('resultado').value = JSON.stringify(json, null, 2);
+  // Modos parciales: 1 item → objeto solo, varios → separados por coma (para pegar en array)
+  function formatParcial(arr){
+    if(arr.length === 0) return '{}';
+    if(arr.length === 1) return JSON.stringify(arr[0], null, 2);
+    return arr.map(o => JSON.stringify(o, null, 2)).join(',\n');
+  }
+
+  let output;
+  if(mode === 'full'){
+    output = JSON.stringify({
+      config: { app_name: appName, user, password: pass },
+      movies: moviesJSON,
+      series: seriesJSON,
+    }, null, 2);
+  } else if(mode === 'movie'){
+    output = formatParcial(moviesJSON);
+  } else if(mode === 'series'){
+    output = formatParcial(seriesJSON);
+  } else if(mode === 'episode'){
+    output = formatParcial(episodesJSON);
+  }
+
+  document.getElementById('resultado').value = output;
 }
 
 async function copiarJSON(){
