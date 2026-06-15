@@ -751,12 +751,14 @@ function generarJSON(){
 
     const seriesMap = {};
     eps.forEach(ep => {
-      const sKey = ep.season_real || ep.temporada;
+      const sReal = ep.season_real || ep.temporada;
+      const sName = ep.season_name || `Temporada ${sReal}`;
+      const sKey  = `${sReal}__${sName}`; // clave única: número real + nombre visual
       if(!seriesMap[ep.titulo]){
         seriesMap[ep.titulo] = { tmdb_id: ep.tmdb_id, trailer: ep.trailer || '', seasons: {} };
       }
       if(!seriesMap[ep.titulo].seasons[sKey]){
-        seriesMap[ep.titulo].seasons[sKey] = { name: ep.season_name || `Temporada ${sKey}`, eps: [] };
+        seriesMap[ep.titulo].seasons[sKey] = { real: sReal, name: sName, eps: [] };
       }
       seriesMap[ep.titulo].seasons[sKey].eps.push(ep);
     });
@@ -767,10 +769,11 @@ function generarJSON(){
       tmdb_id: parseInt(data.tmdb_id) || data.tmdb_id,
       trailer: data.trailer || '',
       seasons: Object.entries(data.seasons)
-        .sort((a,b) => parseInt(a[0]) - parseInt(b[0]))
-        .map(([sNum, sData]) => ({
-          season_number: parseInt(sNum),
+        .sort((a,b) => a[1].real - b[1].real || a[1].name.localeCompare(b[1].name))
+        .map(([sKey, sData]) => ({
+          season_number: sData.real,
           name:          sData.name,
+          tmdb_season:   sData.real,
           episodes: sData.eps
             .sort((a,b) => a.episodio - b.episodio)
             .map(ep => ({
@@ -828,12 +831,14 @@ function generarJSON(){
 
   const seriesMapTV = {};
   eps.forEach(ep => {
-    const sKey = ep.season_real || ep.temporada;
+    const sReal = ep.season_real || ep.temporada;
+    const sName = ep.season_name || `Temporada ${sReal}`;
+    const sKey  = `${sReal}__${sName}`; // clave única: número real + nombre visual
     if(!seriesMapTV[ep.titulo]){
       seriesMapTV[ep.titulo] = { tmdb_id: ep.tmdb_id, year: ep.year || '', seasons: {} };
     }
     if(!seriesMapTV[ep.titulo].seasons[sKey]){
-      seriesMapTV[ep.titulo].seasons[sKey] = { name: ep.season_name || `Temporada ${sKey}`, eps: [] };
+      seriesMapTV[ep.titulo].seasons[sKey] = { real: sReal, name: sName, eps: [] };
     }
     seriesMapTV[ep.titulo].seasons[sKey].eps.push(ep);
   });
@@ -844,9 +849,10 @@ function generarJSON(){
     tmdb_id: parseInt(data.tmdb_id) || data.tmdb_id,
     year:    parseInt(data.year) || data.year || '',
     seasons: Object.entries(data.seasons)
-      .sort((a,b) => parseInt(a[0]) - parseInt(b[0]))
-      .map(([sNum, sData]) => ({
-        title: sData.name,
+      .sort((a,b) => a[1].real - b[1].real || a[1].name.localeCompare(b[1].name))
+      .map(([sKey, sData]) => ({
+        title:       sData.name,
+        tmdb_season: sData.real,
         episodes: sData.eps
           .sort((a,b) => a.episodio - b.episodio)
           .map(ep => ({
