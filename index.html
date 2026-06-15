@@ -329,6 +329,23 @@ textarea{
     </div>
   </div>
 
+  <!-- FORMATO DE JSON -->
+  <div style="margin-bottom:14px;background:rgba(20,20,20,.85);border-radius:12px;padding:14px 16px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">📱 Formato de JSON</div>
+    <div style="display:flex;flex-wrap:wrap;gap:14px;">
+      <label class="check-label">
+        <input type="radio" name="jsonFormat" value="mobile" checked
+          style="accent-color:var(--red);width:15px;height:15px;">
+        📱 Celular (XSTREAM)
+      </label>
+      <label class="check-label">
+        <input type="radio" name="jsonFormat" value="tv"
+          style="accent-color:var(--red);width:15px;height:15px;">
+        📺 TV (Bunny Embed)
+      </label>
+    </div>
+  </div>
+
   <!-- MODO DE GENERACIÓN -->
   <div style="margin-bottom:14px;background:rgba(20,20,20,.85);border-radius:12px;padding:14px 16px;">
     <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">📦 Modo de generación</div>
@@ -680,98 +697,161 @@ function generarJSON(){
   const user    = document.getElementById('cfgUser').value || 'admin';
   const pass    = document.getElementById('cfgPass').value || '1234';
   const mode    = document.querySelector('input[name="jsonMode"]:checked').value;
+  const fmt     = document.querySelector('input[name="jsonFormat"]:checked').value;
 
   const movies = base.filter(i => i.type === 'movie');
   const eps    = base.filter(i => i.type === 'episode');
 
-  // ── Películas ──
-  const moviesJSON = movies.map((m, idx) => ({
+  // ── Modos parciales: objetos limpios para pegar dentro de un array existente ──
+  function formatParcial(arr){
+    if(arr.length === 0) return '{}';
+    return arr.map(o => JSON.stringify(o, null, 2)).join(',\n');
+  }
+
+  /* ════════════════════════════
+     FORMATO CELULAR (XSTREAM)
+  ════════════════════════════ */
+  if(fmt === 'mobile'){
+
+    const moviesJSON = movies.map((m, idx) => ({
+      id:          `m${idx+1}`,
+      title:       m.titulo,
+      tmdb_id:     parseInt(m.tmdb_id) || m.tmdb_id,
+      year:        parseInt(m.year) || m.year || '',
+      poster:      '',
+      backdrop:    '',
+      description: '',
+      trailer:     m.trailer || '',
+      url:         m.url,
+      qualities:   m.qualities,
+      audio:       m.audio,
+      subtitles:   m.subtitles,
+    }));
+
+    const seriesMap = {};
+    eps.forEach(ep => {
+      if(!seriesMap[ep.titulo]){
+        seriesMap[ep.titulo] = { tmdb_id: ep.tmdb_id, trailer: ep.trailer || '', seasons: {} };
+      }
+      if(!seriesMap[ep.titulo].seasons[ep.temporada]){
+        seriesMap[ep.titulo].seasons[ep.temporada] = [];
+      }
+      seriesMap[ep.titulo].seasons[ep.temporada].push(ep);
+    });
+
+    const seriesJSON = Object.entries(seriesMap).map(([title, data], idx) => ({
+      id:      `s${idx+1}`,
+      title,
+      tmdb_id: parseInt(data.tmdb_id) || data.tmdb_id,
+      trailer: data.trailer || '',
+      seasons: Object.entries(data.seasons)
+        .sort((a,b) => parseInt(a[0]) - parseInt(b[0]))
+        .map(([sNum, epList]) => ({
+          season_number: parseInt(sNum),
+          name:          `Temporada ${sNum}`,
+          episodes: epList
+            .sort((a,b) => a.episodio - b.episodio)
+            .map(ep => ({
+              episode_number: ep.episodio,
+              title:          ep.capitulo,
+              thumbnail:      '',
+              description:    '',
+              url:            ep.url,
+              qualities:      ep.qualities,
+              audio:          ep.audio,
+              subtitles:      ep.subtitles,
+            }))
+        }))
+    }));
+
+    const episodesJSON = eps.map(ep => ({
+      episode_number: ep.episodio,
+      title:          ep.capitulo,
+      thumbnail:      '',
+      description:    '',
+      url:            ep.url,
+      qualities:      ep.qualities,
+      audio:          ep.audio,
+      subtitles:      ep.subtitles,
+    }));
+
+    let output;
+    if(mode === 'full'){
+      output = JSON.stringify({
+        config: { app_name: appName, user, password: pass },
+        movies: moviesJSON,
+        series: seriesJSON,
+      }, null, 2);
+    } else if(mode === 'movie'){
+      output = formatParcial(moviesJSON);
+    } else if(mode === 'series'){
+      output = formatParcial(seriesJSON);
+    } else if(mode === 'episode'){
+      output = formatParcial(episodesJSON);
+    }
+    document.getElementById('resultado').value = output;
+    return;
+  }
+
+  /* ════════════════════════════
+     FORMATO TV (BUNNY EMBED)
+  ════════════════════════════ */
+  const moviesTV = movies.map((m, idx) => ({
     id:          `m${idx+1}`,
     title:       m.titulo,
     tmdb_id:     parseInt(m.tmdb_id) || m.tmdb_id,
     year:        parseInt(m.year) || m.year || '',
-    poster:      '',
-    backdrop:    '',
-    description: '',
-    trailer:     m.trailer || '',
-    url:         m.url,
-    qualities:   m.qualities,
-    audio:       m.audio,
-    subtitles:   m.subtitles,
+    bunny_embed: m.url,
   }));
 
-  // ── Series: agrupar por título ──
-  const seriesMap = {};
+  const seriesMapTV = {};
   eps.forEach(ep => {
-    if(!seriesMap[ep.titulo]){
-      seriesMap[ep.titulo] = { tmdb_id: ep.tmdb_id, trailer: ep.trailer || '', seasons: {} };
+    if(!seriesMapTV[ep.titulo]){
+      seriesMapTV[ep.titulo] = { tmdb_id: ep.tmdb_id, year: ep.year || '', seasons: {} };
     }
-    if(!seriesMap[ep.titulo].seasons[ep.temporada]){
-      seriesMap[ep.titulo].seasons[ep.temporada] = [];
+    if(!seriesMapTV[ep.titulo].seasons[ep.temporada]){
+      seriesMapTV[ep.titulo].seasons[ep.temporada] = [];
     }
-    seriesMap[ep.titulo].seasons[ep.temporada].push(ep);
+    seriesMapTV[ep.titulo].seasons[ep.temporada].push(ep);
   });
 
-  const seriesJSON = Object.entries(seriesMap).map(([title, data], idx) => ({
+  const seriesTV = Object.entries(seriesMapTV).map(([title, data], idx) => ({
     id:      `s${idx+1}`,
     title,
     tmdb_id: parseInt(data.tmdb_id) || data.tmdb_id,
-    trailer: data.trailer || '',
+    year:    parseInt(data.year) || data.year || '',
     seasons: Object.entries(data.seasons)
       .sort((a,b) => parseInt(a[0]) - parseInt(b[0]))
       .map(([sNum, epList]) => ({
-        season_number: parseInt(sNum),
-        name:          `Temporada ${sNum}`,
+        title: `Temporada ${sNum}`,
         episodes: epList
           .sort((a,b) => a.episodio - b.episodio)
           .map(ep => ({
-            episode_number: ep.episodio,
-            title:          ep.capitulo,
-            thumbnail:      '',
-            description:    '',
-            url:            ep.url,
-            qualities:      ep.qualities,
-            audio:          ep.audio,
-            subtitles:      ep.subtitles,
+            title:       ep.capitulo,
+            bunny_embed: ep.url,
           }))
       }))
   }));
 
-  // ── Solo capítulo ──
-  const episodesJSON = eps.map(ep => ({
-    episode_number: ep.episodio,
-    title:          ep.capitulo,
-    thumbnail:      '',
-    description:    '',
-    url:            ep.url,
-    qualities:      ep.qualities,
-    audio:          ep.audio,
-    subtitles:      ep.subtitles,
+  const episodesTV = eps.map(ep => ({
+    title:       ep.capitulo,
+    bunny_embed: ep.url,
   }));
 
-  // Modos parciales: 1 item → objeto solo, varios → separados por coma (para pegar en array)
-  function formatParcial(arr){
-    if(arr.length === 0) return '{}';
-    if(arr.length === 1) return JSON.stringify(arr[0], null, 2);
-    return arr.map(o => JSON.stringify(o, null, 2)).join(',\n');
-  }
-
-  let output;
+  let outputTV;
   if(mode === 'full'){
-    output = JSON.stringify({
-      config: { app_name: appName, user, password: pass },
-      movies: moviesJSON,
-      series: seriesJSON,
+    outputTV = JSON.stringify({
+      movies: moviesTV,
+      series: seriesTV,
     }, null, 2);
   } else if(mode === 'movie'){
-    output = formatParcial(moviesJSON);
+    outputTV = formatParcial(moviesTV);
   } else if(mode === 'series'){
-    output = formatParcial(seriesJSON);
+    outputTV = formatParcial(seriesTV);
   } else if(mode === 'episode'){
-    output = formatParcial(episodesJSON);
+    outputTV = formatParcial(episodesTV);
   }
-
-  document.getElementById('resultado').value = output;
+  document.getElementById('resultado').value = outputTV;
 }
 
 async function copiarJSON(){
