@@ -660,9 +660,11 @@ function agregar(){
     year:      contenido.year || '',
     url,
     trailer:   document.getElementById('edTrailer').value.trim(),
-    qualities: getRows('qualRows','quality'),
-    audio:     getRows('audioRows','audio'),
-    subtitles: getRows('subRows','sub'),
+    qualities:   getRows('qualRows','quality'),
+    audio:       getRows('audioRows','audio'),
+    subtitles:   getRows('subRows','sub'),
+    season_real: currentItem.type==='episode' ? (parseInt(document.getElementById('edSeasonReal').value)||currentItem.t) : currentItem.t,
+    season_name: currentItem.type==='episode' ? (document.getElementById('edSeasonName').value.trim()||`Temporada ${currentItem.t}`) : `Temporada ${currentItem.t}`,
   };
 
   base.push(entry);
@@ -856,8 +858,9 @@ function generarJSON(){
         episodes: sData.eps
           .sort((a,b) => a.episodio - b.episodio)
           .map(ep => ({
-            title:       ep.capitulo,
-            bunny_embed: ep.url,
+            episode_number: ep.episodio,
+            title:          ep.capitulo,
+            bunny_embed:    ep.url,
           }))
       }))
   }));
